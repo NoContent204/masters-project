@@ -1,9 +1,9 @@
 # Simple script to find the UDS canIDs based off ISO 15765-4
 import can
 
-def sendUDSReq(SID, d):
-   bus.send(can.Message(arbitration_id=tx_canID, data=[0x02,SID] + d, is_extended_id=False))
-   resp = bus.recv(timeout=5)
+def sendUDSReq(SID, dataFrame):
+   bus.send(can.Message(arbitration_id=tx_canID, data=[0x02,SID] + dataFrame, is_extended_id=False))
+   resp = bus.recv(timeout=6)
    return resp
 
 
@@ -18,32 +18,32 @@ SIDs = {
    # 0x84, # Secured data transmission
    # 0x85, # Control DTC Settings
    # 0x86, # Response on Event
-   # 0x87, # Link Control
-   # 0x22, # Read Data by Identifier
-   # 0x23, # Read memory by address
+   0x87, # Link Control
+   0x22, # Read Data by Identifier
+   0x23, # Read memory by address
    # 0x24, # Read Scaling data by identifier
    # 0x2a, # Read data by identifier periodic
    # 0x2c, # Dynamically defind data identifer
-   # 0x2e, # Write data by identifier
-   # 0x3d, # Write memory by address
+   0x2e, # Write data by identifier
+   0x3d, # Write memory by address 
    0x14, # Clear diagnoistic information
    0x19, # Read DTC information
-   # 0x2f, # Input output control by identifter 
+   0x2f, # Input output control by identifter 
    0x31, # Routine control 
    0x34, # Request download
-   # 0x35, # Request upload
-   # 0x36, # Transfer data
-   # 0x37, # Request transfer exit
-   # 0x38  # Request file transfer 
+   0x35, # Request upload
+   0x36, # Transfer data
+   0x37, # Request transfer exit
+   0x38  # Request file transfer 
 }
 
 
 bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
 bus.set_filters([{"can_id": 0x72e, "can_mask": 0x72e, "extended": False}])
 
-message = can.Message(arbitration_id=0x720, data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
+# message = can.Message(arbitration_id=0x720, data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
 print(bus.filters)
-bus.send(message) # send a message to "wake up" the ECU    
+# bus.send(message) # send a message to "wake up" the ECU    
 tx_canID = 0x7df
 # rx_canID = 0x72e
 # tp_addr = isotp.Address(isotp.AddressingMode.Normal_11bits, txid=canID, rxid=0x72e)
@@ -58,9 +58,10 @@ availableServices = list(SIDs)
 
 
 for SID in SIDs:
-    print(hex(SID))
+    print("Scanning SID: "+ hex(SID))
     resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # start with blank data
-    # print(resp.arbitration_id)
+    if (resp != None and resp.arbitration_id != 0x72e):
+      resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # sometimes we get a random message form id 4? so we have to resend 
     if (resp == None):
       resp = sendUDSReq(SID, [0x01,0x00,0x00,0x00,0x00,0x00]) or sendUDSReq(SID,[0x11,0x11,0x11,0x11,0x11,0x11]) # try either a subfunction of 0x01 or all the data being 1's
     if (resp.data[1] == SID + 0x40): # Postive respose is always the services id + 0x40 e.g. positive reponse for 0x10 is 0x50 
