@@ -33,8 +33,10 @@ SIDs = {
 
 
 bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
+bus.set_filters([{"can_id": 0x72e, "can_mask": 0xff, "extended": False}])
 
 message = can.Message(arbitration_id=0x7df, data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
+print(bus.filters)
 bus.send(message) # send a message to "wake up" the ECU    
 tx_canID = 0x7df
 # rx_canID = 0x72e
@@ -43,9 +45,16 @@ tx_canID = 0x7df
 # conn = PythonIsoTpConnection(stack)
 
 availableServices = list(SIDs)
+# bus.send(can.Message(arbitration_id=tx_canID, data=[0x02,0x10,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False))
+# resp = bus.recv()
+# print(resp.data[1])
+# print(hex(resp.arbitration_id))
+
+
 for SID in SIDs:
+    print(hex(SID))
     bus.send(can.Message(arbitration_id=tx_canID, data=[0x02,SID,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False))
-    resp = bus.recv()
+    resp = bus.recv(timeout=2)
     if (resp.data[1] == SID + 0x40): # Postive respose is always the services id + 0x40 e.g. positive reponse for 0x10 is 0x50 
       print("Postive response - Service available")
     elif (resp.data[1] == 0x7f): # Negative response
