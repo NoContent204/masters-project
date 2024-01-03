@@ -2,40 +2,151 @@
 import can
 
 def sendUDSReq(SID, dataFrame):
-   bus.send(can.Message(arbitration_id=tx_canID, data=[0x02,SID] + dataFrame, is_extended_id=False))
+   dataLength = 0x1 + len(dataFrame) # calculate the length of the data including the SID for the PCI header required by CAN-TP (ISO 15765) (assuming single frame)
+   bus.send(can.Message(arbitration_id=tx_canID, data=[dataLength,SID] + dataFrame, is_extended_id=False))
    resp = bus.recv(timeout=6)
    return resp
 
+SIDs = [
+   {
+      "SID": 0x10, # Diagnostic session control *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x11, # ECU reset *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x27, # Security Access 
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x28, # Communication control *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x29,# Authentication ?
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x3e,# Tester Present *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x83, # Access timing parameters *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x84,# Secured data transmission 
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x85, # Control DTC Settings *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x86, # Response on Event *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x87, # Link Control *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x22, # Read Data by Identifier
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x23, # Read memory by address
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x24, # Read Scaling data by identifier
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x2a, # Read data by identifier periodic
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x2c, # Dynamically defind data identifer *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x2e, # Write data by identifier
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x3d, # Write memory by address 
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x14, # Clear diagnoistic information
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x19, # Read DTC information *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x2f, # Input output control by identifter 
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x31, # Routine control *
+      "hasSubFunction": True ,
+   },
+   {
+      "SID": 0x34, # Request download
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x35, # Request upload
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x36, # Transfer data
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x37, # Request transfer exit
+      "hasSubFunction": False ,
+   },
+   {
+      "SID": 0x38, # Request file transfer 
+      "hasSubFunction": False ,
+   },
+]
 
-SIDs = {
-   0x10, # Diagnostic session control
-   # 0x11, # ECU reset
-   0x27, # Security Access
-   # 0x28, # Communication control
-   # 0x29, # Authentication
-   0x3e, # Tester Present
-   # 0x83, # Access timing parameters
-   # 0x84, # Secured data transmission
-   # 0x85, # Control DTC Settings
-   # 0x86, # Response on Event
-   0x87, # Link Control
-   0x22, # Read Data by Identifier
-   0x23, # Read memory by address
-   # 0x24, # Read Scaling data by identifier
-   # 0x2a, # Read data by identifier periodic
-   # 0x2c, # Dynamically defind data identifer
-   0x2e, # Write data by identifier
-   0x3d, # Write memory by address 
-   0x14, # Clear diagnoistic information
-   0x19, # Read DTC information
-   0x2f, # Input output control by identifter 
-   0x31, # Routine control 
-   0x34, # Request download
-   0x35, # Request upload
-   0x36, # Transfer data
-   0x37, # Request transfer exit
-   0x38  # Request file transfer 
-}
+# SIDs = {
+#    0x10, # Diagnostic session control *
+#    #0x11, # ECU reset *
+#    0x27, # Security Access *
+#    # 0x28, # Communication control *
+#    # 0x29, # Authentication ?
+#    0x3e, # Tester Present *
+#    # 0x83, # Access timing parameters *
+#    # 0x84, # Secured data transmission 
+#    # 0x85, # Control DTC Settings *
+#    # 0x86, # Response on Event *
+#    0x87, # Link Control *
+#    0x22, # Read Data by Identifier
+#    0x23, # Read memory by address
+#    # 0x24, # Read Scaling data by identifier
+#    # 0x2a, # Read data by identifier periodic
+#    # 0x2c, # Dynamically defind data identifer *
+#    0x2e, # Write data by identifier
+#    0x3d, # Write memory by address 
+#    0x14, # Clear diagnoistic information
+#    0x19, # Read DTC information *
+#    0x2f, # Input output control by identifter 
+#    0x31, # Routine control *
+#    0x34, # Request download
+#    0x35, # Request upload
+#    0x36, # Transfer data
+#    0x37, # Request transfer exit
+#    0x38  # Request file transfer 
+# }
 
 
 bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
@@ -57,8 +168,10 @@ availableServices = list(SIDs)
 # print(hex(resp.arbitration_id))
 
 
-for SID in SIDs:
+for service in SIDs:
+    SID = service["SID"]
     print("Scanning SID: "+ hex(SID))
+
     resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # start with blank data
     if (resp != None and resp.arbitration_id != 0x72e):
       resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # sometimes we get a random message form id 4? so we have to resend 
@@ -71,7 +184,8 @@ for SID in SIDs:
       # All the response codes (other than 0x11) imply that the service is supported but a specific error has occured, we can still fuzz these services
       if (resp.data[3] == 0x11): # Specific negative response codes
          print("Service not supported")
-         availableServices.remove(SID) # service is not supported by the BCM so remove the service ID from the list
+         #availableServices.remove(SID) 
+         availableServices = [i for i in availableServices if not (i['SID'] == SID)]# service is not supported by the BCM so remove the service ID from the list
       elif (resp.data[3] == 0x12):
          print(hex(SID) + " - Sub-function not supported")
       elif (resp.data[3] == 0x13):
@@ -115,5 +229,5 @@ for SID in SIDs:
       else:
          print("Unexpected issue error code "+ hex(resp.data[3]))
 with open('availableServices.log',"a") as log: # Save list of avaiable services to file (to be used by main fuzzer)
-   for SID in availableServices:
-      print(hex(SID),file=log)
+   for service in availableServices:
+      print(service,file=log)
