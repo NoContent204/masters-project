@@ -1,9 +1,9 @@
-# Simple script to find the UDS canIDs based off ISO 15765-4
+# Script to find which services are avaiable on the UDS implementation we are fuzzing
 import can
 
 def sendUDSReq(SID, dataFrame):
-   dataLength = 0x1 + len(dataFrame) # calculate the length of the data including the SID for the PCI header required by CAN-TP (ISO 15765) (assuming single frame)
-   bus.send(can.Message(arbitration_id=tx_canID, data=[dataLength,SID] + dataFrame, is_extended_id=False))
+   PCI = 0x1 + len(dataFrame) # calculate the length of the data including the SID for the PCI header required by CAN-TP (ISO 15765) (assuming single frame)
+   bus.send(can.Message(arbitration_id=tx_canID, data=[PCI,SID] + dataFrame, is_extended_id=False))
    resp = bus.recv(timeout=6)
    return resp
 
@@ -150,7 +150,7 @@ SIDs = [
 
 
 bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
-bus.set_filters([{"can_id": 0x72e, "can_mask": 0x72e, "extended": False}])
+bus.set_filters([{"can_id": 0x72e, "can_mask": 0x72e, "extended": False}]) # set filter to only get responses from the response CAN-ID for UDS (0x72e)
 
 # message = can.Message(arbitration_id=0x720, data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
 print(bus.filters)
@@ -185,7 +185,7 @@ for service in SIDs:
       if (resp.data[3] == 0x11): # Specific negative response codes
          print("Service not supported")
          #availableServices.remove(SID) 
-         availableServices = [i for i in availableServices if not (i['SID'] == SID)]# service is not supported by the BCM so remove the service ID from the list
+         availableServices = [service for service in availableServices if not (service['SID'] == SID)]# service is not supported by the BCM so remove the service ID from the list
       elif (resp.data[3] == 0x12):
          print(hex(SID) + " - Sub-function not supported")
       elif (resp.data[3] == 0x13):
@@ -201,7 +201,7 @@ for service in SIDs:
       elif (resp.data[3] == 0x25):
          print(hex(SID) + " - No response from subnet component")
       elif (resp.data[3] == 0x26):
-         print(hex(SID) + " - Failure prevents eecution of requested action")
+         print(hex(SID) + " - Failure prevents execution of requested action")
       elif (resp.data[3] == 0x31):
          print(hex(SID) + " - Request out of range")
       elif (resp.data[3] == 0x33):
