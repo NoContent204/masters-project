@@ -27,6 +27,6 @@ while(len(re.findall(nonTerminalPattern,currentTerm)) !=0): # while there are st
     expansionList: "list[str]" = UDS_Grammar[expandingSymbol] # get list of expanding options for that symbol
     chosenExpansion : str = random.choice(expansionList) # pick one of the options randomly
     print(expandingSymbol + " ----> "+ chosenExpansion)
-    currentTerm = currentTerm.replace(expandingSymbol,chosenExpansion) # replace the non terminal symbol with the chosen expansion
+    currentTerm = currentTerm.replace(expandingSymbol,chosenExpansion,1) # replace the non terminal symbol with the chosen expansion
 
 print(currentTerm)
