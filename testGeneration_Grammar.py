@@ -1,6 +1,7 @@
-# This file implements a simple BNF grammar for the structure of UDS requests using a dictionary that maps nonterminal symbols to their corresponding expansions
+# This file implements a simple BNF grammar for the structure of single frame UDS requests using a dictionary that maps nonterminal symbols to their corresponding expansions
 import re
 import random
+from textwrap import wrap
 UDS_Grammar: "dict[str, list[str]]" =  {
     "<start>": ["<udsReq>"],
     "<udsReq>": ["<SID><subfunction><data-2>", "<SID><data-1>"],
@@ -12,21 +13,24 @@ UDS_Grammar: "dict[str, list[str]]" =  {
     "<hex>": ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"],
     "<hex-2>" : ["0","1","2","3","4","5","6","7"]
 }
-
-
 startTerm = "<start>"
-
-currentTerm = startTerm
-
 nonTerminalPattern = '<[^<> ]+>'
-print(len(re.findall(nonTerminalPattern,currentTerm)))
 
-while(len(re.findall(nonTerminalPattern,currentTerm)) !=0): # while there are still non terminal symbols to expand
-    print(re.findall(nonTerminalPattern,currentTerm))
-    expandingSymbol: str = re.findall(nonTerminalPattern,currentTerm)[0] # get first non terminal symbol
-    expansionList: "list[str]" = UDS_Grammar[expandingSymbol] # get list of expanding options for that symbol
-    chosenExpansion : str = random.choice(expansionList) # pick one of the options randomly
-    print(expandingSymbol + " ----> "+ chosenExpansion)
-    currentTerm = currentTerm.replace(expandingSymbol,chosenExpansion,1) # replace the non terminal symbol with the chosen expansion
 
-print(currentTerm)
+def generateInput():
+    currentTerm = startTerm
+
+    while(len(re.findall(nonTerminalPattern,currentTerm)) !=0): # while there are still non terminal symbols to expand
+        # print(re.findall(nonTerminalPattern,currentTerm))
+        expandingSymbol: str = re.findall(nonTerminalPattern,currentTerm)[0] # get first non terminal symbol
+        expansionList: "list[str]" = UDS_Grammar[expandingSymbol] # get list of expanding options for that symbol
+        chosenExpansion : str = random.choice(expansionList) # pick one of the options randomly
+        # print(expandingSymbol + " ----> "+ chosenExpansion)
+        currentTerm = currentTerm.replace(expandingSymbol,chosenExpansion,1) # replace the non terminal symbol with the chosen expansion
+
+    byteList : "list[str]" = wrap(currentTerm,2) # split generated string into list of hex strings for each byte
+    generatedInput : list[int] = list(map(lambda hex: int(hex,16),byteList))
+
+    return generatedInput
+
+print(generateInput())
