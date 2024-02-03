@@ -1,9 +1,14 @@
 # Script to find which services are avaiable on the UDS implementation we are fuzzing
 import can
+import numpy as np
 
 def sendUDSReq(SID, dataFrame):
    PCI = 0x1 + len(dataFrame) # calculate the length of the data including the SID for the PCI header required by CAN-TP (ISO 15765) (assuming single frame)
-   bus.send(can.Message(arbitration_id=tx_canID, data=[PCI,SID] + dataFrame, is_extended_id=False))
+   canData = [PCI,SID] + dataFrame
+   print(canData)
+   canData = list(np.pad(canData,(0,8-len(canData)),'constant',constant_values=0)) # padd data with zeros
+   print(canData)
+   bus.send(can.Message(arbitration_id=tx_canID, data=canData, is_extended_id=False))
    resp = bus.recv(timeout=6)
    return resp
 
@@ -152,9 +157,9 @@ SIDs = [
 bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
 bus.set_filters([{"can_id": 0x72e, "can_mask": 0x72e, "extended": False}]) # set filter to only get responses from the response CAN-ID for UDS (0x72e)
 
-# message = can.Message(arbitration_id=0x720, data=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
+message = can.Message(arbitration_id=0x7df, data=[0x3e,0x00,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
 print(bus.filters)
-# bus.send(message) # send a message to "wake up" the ECU    
+bus.send(message) # send a message to "wake up" the ECU    
 tx_canID = 0x7df
 # rx_canID = 0x72e
 # tp_addr = isotp.Address(isotp.AddressingMode.Normal_11bits, txid=canID, rxid=0x72e)
@@ -172,11 +177,11 @@ for service in SIDs:
     SID = service["SID"]
     print("Scanning SID: "+ hex(SID))
 
-    resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # start with blank data
+    resp = sendUDSReq(SID, []) # start with blank data
     if (resp != None and resp.arbitration_id != 0x72e):
-      resp = sendUDSReq(SID, [0x00,0x00,0x00,0x00,0x00,0x00]) # sometimes we get a random message form id 4? so we have to resend 
+      resp = sendUDSReq(SID, []) # sometimes we get a random message form id 4? so we have to resend 
     if (resp == None):
-      resp = sendUDSReq(SID, [0x01,0x00,0x00,0x00,0x00,0x00]) or sendUDSReq(SID,[0x11,0x11,0x11,0x11,0x11,0x11]) # try either a subfunction of 0x01 or all the data being 1's
+      resp = sendUDSReq(SID, [0x01]) or sendUDSReq(SID,[0x11,0x11,0x11,0x11,0x11,0x11]) # try either a subfunction of 0x01 or all the data being 1's
     if (resp.data[1] == SID + 0x40): # Postive respose is always the services id + 0x40 e.g. positive reponse for 0x10 is 0x50 
       print("Postive response - Service available")
     elif (resp.data[1] == 0x7f): # Negative response
