@@ -47,4 +47,25 @@ def recordNonUDSTraffic():
             if not(id in nonUDSTraffic) or not(data in nonUDSTraffic[id]): # either traffic from a new canID or data that hasn't been sent before 
                 newTraffic.append(message) # record the new message received
                 nonUDSTraffic[id].append(data) # add message info to set of traffic 
+
+def getAverageResponseTime(n: int):
+    testerPresentFrame = [0x3e,0x00]
+    totalT = 0
+    for _ in range(n):
+        startT =  time.time()
+        _ = canCommunication.sendUDSReq(testerPresentFrame)
+        respT = time.time() - startT
+        totalT += respT
+    avgT = totalT / n
+    return avgT
+
+def responseTiming(avgT: float, data: "list[int]", timeThresholdMultipler: int): # pass avgT (for comparison), data (to send) and timeThresholdMultipler (mulitpler for avgT to compare respT)
+    startT = time.time()
+    _ = canCommunication.sendUDSReq(data)
+    respT = time.time() - startT
+    if respT > avgT * timeThresholdMultipler:
+        # respT was significantly longer than avgT
+        return True # yes we want to record the data we sent as it caused ECU to take longer to respond
+    else:
+        return False
     
