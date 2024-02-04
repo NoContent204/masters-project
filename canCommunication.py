@@ -13,7 +13,7 @@ def sendUDSReq(dataFrame): # SID included within dataFrame array
     canData: list[int] = PCI + dataFrame # combine the two into a single array
     canData = list(np.pad(canData,(0,8-len(canData)),'constant',constant_values=0)) # padd data with zeros
     bus.send(can.Message(arbitration_id=TX_CAN_ID, data=canData, is_extended_id=False)) # send data
-    resp = bus.recv(timeout=6) # get response
+    resp = bus.recv() # get response
     return resp
 
 
