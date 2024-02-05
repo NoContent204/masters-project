@@ -4,8 +4,12 @@ import numpy as np
 
 TX_CAN_ID = 0x7df
 RX_CAN_ID = 0x72e
-bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000) # set up can bus communication
-bus.set_filters([{"can_id": RX_CAN_ID, "can_mask": RX_CAN_ID, "extended": False}]) # set filter to only get responses from the response CAN-ID for UDS
+try:
+    bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000) # set up can bus communication
+    bus.set_filters([{"can_id": RX_CAN_ID, "can_mask": RX_CAN_ID, "extended": False}]) # set filter to only get responses from the response CAN-ID for UDS
+except OSError:
+    print("Please connect to an ECU and set up the CAN interface using ./setup.sh")
+    exit(0)
 
 
 def sendUDSReq(dataFrame): # SID included within dataFrame array

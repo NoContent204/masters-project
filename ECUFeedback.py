@@ -2,7 +2,11 @@ import canCommunication
 import can
 from can import Message
 import time
-bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
+try:
+    bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
+except OSError:
+    print("Please connect to an ECU and set up the CAN interface using ./setup.sh")
+    exit(0)
 nonUDSTraffic: "dict[int, list[bytearray]]" = {}
 newTraffic: "list[Message]"= []
 def readDTCInformation():
