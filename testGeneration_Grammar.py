@@ -57,11 +57,3 @@ def generateInput():
         return generatedInput[:7] # return only 7 bytes
     else:
         return generatedInput
-
-y = []
-#print(generateInput())
-# for x in range(1000):
-#     y.append(len(generateInput()))
-# print("Average len = "+str(sum(y)/len(y)))
-# print("Max input len = "+str(max(y)))
-# print("Min input len = "+str(min(y)))

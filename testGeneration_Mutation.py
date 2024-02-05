@@ -47,7 +47,3 @@ def byteShift(data: "list[int]", iterations: int):
             data[byteIndex] = (data[byteIndex] << shift) % 255
 
     return data
-
-x = generateInput()
-print(x)
-print(byteShift(x,20))
