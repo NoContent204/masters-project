@@ -8,7 +8,6 @@ except OSError:
     print("Please connect to an ECU and set up the CAN interface using ./setup.sh")
     exit(0)
 nonUDSTraffic: "dict[int, list[bytearray]]" = {}
-newTraffic: "list[Message]"= []
 def readDTCInformation():
     resp = canCommunication.sendUDSReq([0x19,0x01,0x05]) # call read DTC info service with subfunction 0x01 (report Number Of DTC By Status Mask)
     # we use a status mask of 0x05 which is a combination of pendingDTC (0x04) status and testFailed (0x01) status
@@ -21,10 +20,11 @@ def readDTCInformation():
     else:
         return -1
     
-def recordNonUDSTraffic():
+def recordNonUDSTraffic(initial: bool):
     bus.set_filters() # reset filters to record all data
     finishT = time.time() + 5 # Record traffic for 5 seconds
-    if nonUDSTraffic: # dict is empty
+    newTraffic: "list[Message]"= []
+    if initial: # dict is empty
         while time.time() < finishT: # get initial traffic
             message = bus.recv(0.5)
             if message == None:
@@ -51,6 +51,7 @@ def recordNonUDSTraffic():
             if not(id in nonUDSTraffic) or not(data in nonUDSTraffic[id]): # either traffic from a new canID or data that hasn't been sent before 
                 newTraffic.append(message) # record the new message received
                 nonUDSTraffic[id].append(data) # add message info to set of traffic 
+    return newTraffic
 
 def getAverageResponseTime(n: int):
     testerPresentFrame = [0x3e,0x00]
@@ -69,7 +70,7 @@ def responseTiming(avgT: float, data: "list[int]", timeThresholdMultipler: int):
     respT = time.time() - startT
     if respT > avgT * timeThresholdMultipler:
         # respT was significantly longer than avgT
-        return True # yes we want to record the data we sent as it caused ECU to take longer to respond
+        return [True,respT] # yes we want to record the data we sent as it caused ECU to take longer to respond
     else:
-        return False
+        return [False,respT]
     
