@@ -70,6 +70,10 @@ def main():
                 print(str(data) + " casued ECU to take " + str(x[1]) + "seconds to respond") # CHANGE TO WRITE TO FILE LATER (with reason)
         else:
             resp = canCommunication.sendUDSReq(data)
+        
+        if (resp == None):
+            print(str(data) + " caused a None reponse (likely due to timeout)") # CHANGE TO WRITE TO FILE LATER (with reason)
+        
         if (args.dtc):
             dtcs = readDTCInformation()
             if (dtcs > totalDTCs): # test caused DTC(s)
