@@ -17,8 +17,11 @@ def sendUDSReq(dataFrame): # SID included within dataFrame array
     canData: list[int] = PCI + dataFrame # combine the two into a single array
     canData = list(np.pad(canData,(0,8-len(canData)),'constant',constant_values=0)) # padd data with zeros
     bus.send(can.Message(arbitration_id=TX_CAN_ID, data=canData, is_extended_id=False)) # send data
-    resp = bus.recv() # get response
+    resp = bus.recv(3) # get response
     return resp
+
+def extendedSession():
+    bus.send(can.Message(arbitration_id=TX_CAN_ID, data=[0x02,0x10,0x03,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)) # switch to extended diagnostic control session
 
 
 def sendWakeUpMessage(): # function to send a wake up message to the ECU (Tester present) to make sure ECU will respond to fuzzing messages
