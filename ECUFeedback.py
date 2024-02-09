@@ -7,7 +7,7 @@ try:
 except OSError:
     print("Please connect to an ECU and set up the CAN interface using ./setup.sh")
     exit(0)
-nonUDSTraffic: "dict[int, list[bytearray]]" = {}
+nonUDSTraffic: "dict[int, dict[bytearray,int]]" = {} # dictionary mapping can ids to list of dictionaryies mapping the data to an int representing how many times that message has been seen (-1 indicating it was an initial message)
 def readDTCInformation():
     resp = canCommunication.sendUDSReq([0x19,0x01,0x05]) # call read DTC info service with subfunction 0x01 (report Number Of DTC By Status Mask)
     # we use a status mask of 0x05 which is a combination of pendingDTC (0x04) status and testFailed (0x01) status
@@ -22,7 +22,7 @@ def readDTCInformation():
     
 def recordNonUDSTraffic(initial: bool):
     bus.set_filters() # reset filters to record all data
-    finishT = time.time() + 5 # Record traffic for 5 seconds
+    finishT = time.time() + 10 # Record traffic for 10 seconds
     newTraffic: "list[Message]"= []
     if initial: # dict is empty
         while time.time() < finishT: # get initial traffic
@@ -35,10 +35,18 @@ def recordNonUDSTraffic(initial: bool):
                 continue
             data = message.data
             if id in nonUDSTraffic:
-                nonUDSTraffic[id].append(data)  
+                nonUDSTraffic[id].append({data: -1})  
             else:
-                nonUDSTraffic[id] = [data]
+                nonUDSTraffic[id] = [{data: -1}]
+        f = open("nonUDSTraffic_Initial.txt", "w")
+        for id in nonUDSTraffic:
+            f.write(hex(id) + "\n")
+            for data in nonUDSTraffic[id]:
+                f.write(bytes(data).hex() + "\n")
+            f.write("\n")
+        f.close()
     else: # get new traffic
+        f = open("nonUDSTraffic_new.txt","a")
         while time.time() < finishT:
             message = bus.recv(0.5)
             if message == None:
@@ -48,10 +56,19 @@ def recordNonUDSTraffic(initial: bool):
             if id == canCommunication.RX_CAN_ID: # ignore messages from UDS
                 continue
             data = message.data
-            if not(id in nonUDSTraffic) or not(data in nonUDSTraffic[id]): # either traffic from a new canID or data that hasn't been sent before 
-                newTraffic.append(message) # record the new message received
-                nonUDSTraffic[id].append(data) # add message info to set of traffic 
-    return newTraffic
+            if not(id in nonUDSTraffic): # id not in traffic 
+                f.write(hex(id) + " " + bytes(data).hex() + "\n")
+                newTraffic.append(message) # ?
+                nonUDSTraffic.update({id: {data: 1}})    
+            elif not(data in nonUDSTraffic[id]): # id in traffic but not this data
+                f.write(hex(id) + " " + bytes(data).hex() + "\n")
+                newTraffic.append(message) # ?
+                nonUDSTraffic[id].update({data: 1}) # add message info to set of traffic 
+            else: # if id AND data seen before
+                if (nonUDSTraffic[id][data] != -1): # message wasn't part of initial traffic i.e. we don't want to increment number of times seen for initial traffic because it should always be seen
+                    nonUDSTraffic[id].update({data: nonUDSTraffic[id][data] + 1}) # increase number of times message has been seen
+        f.close()
+    return [newTraffic,nonUDSTraffic]
 
 def getAverageResponseTime(n: int):
     testerPresentFrame = [0x3e,0x00]
