@@ -178,9 +178,13 @@ def main():
             #resp = sendUDSReq(SID, [0x01]) or sendUDSReq(SID,[0x11,0x11,0x11,0x11,0x11,0x11]) # try either a subfunction of 0x01 or all the data being 1's
             resp = canCommunication.sendUDSReq([SID] + [0x01]) or canCommunication.sendUDSReq([SID] + [0x11,0x11,0x11,0x11,0x11,0x11])
 
-
          if (resp != None and resp.arbitration_id == 0x72e):
             break # if we got a response then break the loop
+
+      if (resp == None): # even after 5 tries we get None
+         print("No response after 5 attempts - assume service unavailable")
+         availableServices = [service for service in availableServices if not (service['SID'] == SID)]
+         continue
 
       if (resp.data[1] == SID + 0x40): # Postive respose is always the services id + 0x40 e.g. positive reponse for 0x10 is 0x50 
          print("Postive response - Service available")
