@@ -67,21 +67,21 @@ def main():
         if (args.timing):
             x = responseTiming(avgT=avgRespT, data=data, timeThresholdMultipler=args.timing)
             if (x[0]): # response took long enough to trigger threshold
-                print(str(data) + " casued ECU to take " + str(x[1]) + "seconds to respond") # CHANGE TO WRITE TO FILE LATER (with reason)
+                print(bytes(data).hex() + " casued ECU to take " + str(x[1]) + "seconds to respond") # CHANGE TO WRITE TO FILE LATER (with reason)
         else:
             resp = canCommunication.sendUDSReq(data)
         
         if (resp == None):
-            print(str(data) + " caused a None reponse (likely due to timeout)") # CHANGE TO WRITE TO FILE LATER (with reason)
+            print(bytes(data).hex() + " caused a None reponse (likely due to timeout)") # CHANGE TO WRITE TO FILE LATER (with reason)
         
         if (args.dtc):
             dtcs = readDTCInformation()
             if (dtcs > totalDTCs): # test caused DTC(s)
-                print(str(data) + " caused " + str(dtcs - totalDTCs) + "DTC(s)") # CHANGE TO WRITE TO FILE LATER (with reason)
+                print(bytes(data).hex() + " caused " + str(dtcs - totalDTCs) + "DTC(s)") # CHANGE TO WRITE TO FILE LATER (with reason)
             totalDTCs = dtcs
         if (args.traffic):
-            newTraffic = recordNonUDSTraffic(False)
-            if (bool(newTraffic)): # test caused new CAN traffic
-                print(str(data) + " caused new CAN traffic to occur: " + str(newTraffic)) # CHANGE TO WRITE TO FILE LATER (with reason)
+            Traffic = recordNonUDSTraffic(False)
+            if (bool(Traffic[0])): # test caused new CAN traffic
+                print(bytes(data).hex() + " caused new CAN traffic to occur: " + str(Traffic[0])) # CHANGE TO WRITE TO FILE LATER (with reason) # place holder 
 
 main()
