@@ -47,3 +47,22 @@ def byteShift(data: "list[int]", iterations: int):
             data[byteIndex] = (data[byteIndex] << shift) % 255
 
     return data
+
+def byteDeletion(data: "list[int]", iterations: int):
+    for x in range(iterations):
+        if (len(data) == 1):
+            return data # can't delete anymore bytes
+        else:
+            index = random.randint(0,len(data)-1)
+            del data[index]
+    return data
+
+def byteAddition(data: "list[int]", iterations: int):
+    for x in range(iterations):
+        if (len(data) == 7):
+            return data # can't add anymore data (7 bytes is max length of data because CAN frame is 8 bytes (7 bytes of data + PCI byte))
+        else:
+            index = random.randint(0,len(data)-1)
+            newByte = random.getrandbits(8)
+            data.insert(index,newByte)
+    return data
