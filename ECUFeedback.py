@@ -7,7 +7,7 @@ try:
 except OSError:
     print("Please connect to an ECU and set up the CAN interface using ./setup.sh")
     exit(0)
-nonUDSTraffic: "dict[int, dict[bytearray,int]]" = {} # dictionary mapping can ids to list of dictionaryies mapping the data to an int representing how many times that message has been seen (-1 indicating it was an initial message)
+nonUDSTraffic: "dict[int, dict[bytes,int]]" = {} # dictionary mapping can ids to list of dictionaryies mapping the data to an int representing how many times that message has been seen (-1 indicating it was an initial message)
 def readDTCInformation():
     resp = canCommunication.sendUDSReq([0x19,0x01,0x05]) # call read DTC info service with subfunction 0x01 (report Number Of DTC By Status Mask)
     # we use a status mask of 0x05 which is a combination of pendingDTC (0x04) status and testFailed (0x01) status
@@ -35,14 +35,14 @@ def recordNonUDSTraffic(initial: bool):
                 continue
             data = message.data
             if id in nonUDSTraffic:
-                nonUDSTraffic[id].append({data: -1})  
+                nonUDSTraffic[id].update({bytes(data): -1})  
             else:
-                nonUDSTraffic[id] = [{data: -1}]
+                nonUDSTraffic.update({id: {bytes(data): -1}})
         f = open("nonUDSTraffic_Initial.txt", "w")
         for id in nonUDSTraffic:
             f.write(hex(id) + "\n")
-            for data in nonUDSTraffic[id]:
-                f.write(bytes(data).hex() + "\n")
+            for data in nonUDSTraffic[id].keys():
+                f.write(data.hex() + "\n")
             f.write("\n")
         f.close()
     else: # get new traffic
@@ -59,14 +59,14 @@ def recordNonUDSTraffic(initial: bool):
             if not(id in nonUDSTraffic): # id not in traffic 
                 f.write(hex(id) + " " + bytes(data).hex() + "\n")
                 newTraffic.append(message) # ?
-                nonUDSTraffic.update({id: {data: 1}})    
-            elif not(data in nonUDSTraffic[id]): # id in traffic but not this data
+                nonUDSTraffic.update({id: {bytes(data): 1}})    
+            elif not(bytes(data) in nonUDSTraffic[id]): # id in traffic but not this data
                 f.write(hex(id) + " " + bytes(data).hex() + "\n")
                 newTraffic.append(message) # ?
-                nonUDSTraffic[id].update({data: 1}) # add message info to set of traffic 
+                nonUDSTraffic[id].update({bytes(data): 1}) # add message info to set of traffic 
             else: # if id AND data seen before
-                if (nonUDSTraffic[id][data] != -1): # message wasn't part of initial traffic i.e. we don't want to increment number of times seen for initial traffic because it should always be seen
-                    nonUDSTraffic[id].update({data: nonUDSTraffic[id][data] + 1}) # increase number of times message has been seen
+                if (nonUDSTraffic[id][bytes(data)] != -1): # message wasn't part of initial traffic i.e. we don't want to increment number of times seen for initial traffic because it should always be seen
+                    nonUDSTraffic[id].update({bytes(data): nonUDSTraffic[id][bytes(data)] + 1}) # increase number of times message has been seen
         f.close()
     return [newTraffic,nonUDSTraffic]
 
