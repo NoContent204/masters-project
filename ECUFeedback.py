@@ -15,7 +15,7 @@ def readDTCInformation():
     #bus.send(can.Message(arbitration_id=tx_canID, data=[0x03,0x19,0x01,0x05,0x00,0x00,0x00,0x00] , is_extended_id=False)) 
     #resp = bus.recv(timeout=0.5)
     if (resp):
-        print(resp.data[4])
+        #print(resp.data[4])
         return resp.data[4] # print number of DTCs
     else:
         return -1
@@ -83,11 +83,11 @@ def getAverageResponseTime(n: int):
 
 def responseTiming(avgT: float, data: "list[int]", timeThresholdMultipler: int): # pass avgT (for comparison), data (to send) and timeThresholdMultipler (mulitpler for avgT to compare respT)
     startT = time.time()
-    _ = canCommunication.sendUDSReq(data)
+    resp = canCommunication.sendUDSReq(data)
     respT = time.time() - startT
     if respT > avgT * timeThresholdMultipler:
         # respT was significantly longer than avgT
-        return [True,respT] # yes we want to record the data we sent as it caused ECU to take longer to respond
+        return [resp,True,respT] # yes we want to record the data we sent as it caused ECU to take longer to respond
     else:
-        return [False,respT]
+        return [resp,False,respT]
     
