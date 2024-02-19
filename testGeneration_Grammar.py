@@ -2,6 +2,8 @@
 import re
 from textwrap import wrap
 import numpy
+import availableUDSServices
+from os.path import exists
 UDS_Grammar: "dict[str, list[str]]" =  {
     "<start>": ["<udsReq>"],
     "<udsReq>": ["<SID><subfunction><data-2>", "<SID><data-1>"],
@@ -24,6 +26,13 @@ UDS_Grammar2: "dict[str,dict[str,list[any]]]" = { # grammar using probabilities,
     "<hex>": {"options":["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"],"probs":[0.0625 for x in range(16)]}, # equal chances
     "<hex-2>" : {"options":["0","1","2","3","4","5","6","7"],"probs":[0.125 for x in range(8)]} #equal chances
     }
+if (not(exists('availableServices.log'))):
+    availableUDSServices.main()
+f = open('availableServices.log','r')
+SIDs = map(lambda x: x.replace("0x",""),f.readlines())
+UDS_Grammar2["<SID>"]["options"] = SIDs
+UDS_Grammar2["<SID>"]["probs"] = [1 / len(SIDs) for x in range(len(SIDs))]
+
 startTerm = "<start>"
 nonTerminalPattern = '<[^<> ]+>'
 
