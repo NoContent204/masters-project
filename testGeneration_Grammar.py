@@ -29,7 +29,7 @@ UDS_Grammar2: "dict[str,dict[str,list[any]]]" = { # grammar using probabilities,
 if (not(exists('availableServices.log'))):
     availableUDSServices.main()
 f = open('availableServices.log','r')
-SIDs = map(lambda x: x.replace("0x",""),f.readlines())
+SIDs = list(map(lambda x: x.replace("0x",""),f.readlines()))
 UDS_Grammar2["<SID>"]["options"] = SIDs
 UDS_Grammar2["<SID>"]["probs"] = [1 / len(SIDs) for x in range(len(SIDs))]
 
