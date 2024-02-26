@@ -237,6 +237,7 @@ def main():
             print(hex(SID) + " - Service not supported in active session")
          else:
             print("Unexpected issue error code "+ hex(resp.data[3]))
-   with open('availableServices.log',"a") as log: # Save list of avaiable services to file (to be used by main fuzzer)
+   with open('availableServices.log',"w") as log: # Save list of avaiable services to file (to be used by main fuzzer)
       for service in availableServices:
-         print(service,file=log)
+         print(hex(service["SID"]))
+         print(hex(service["SID"]),file=log)
