@@ -12,12 +12,12 @@ except OSError:
     exit(0)
 
 
-def sendUDSReq(dataFrame): # SID included within dataFrame array
+def sendUDSReq(dataFrame, timeout=0.2): # SID included within dataFrame array
     PCI = [len(dataFrame)] # PCI (CAN-TP) header includes length of the data 
     canData: list[int] = PCI + dataFrame # combine the two into a single array
     canData = list(np.pad(canData,(0,8-len(canData)),'constant',constant_values=0)) # padd data with zeros
     bus.send(can.Message(arbitration_id=TX_CAN_ID, data=canData, is_extended_id=False)) # send data
-    resp = bus.recv(3) # get response
+    resp = bus.recv(timeout) # get response
     return resp
 
 def extendedSession():
