@@ -1,15 +1,17 @@
 import canCommunication
 from testGeneration_Grammar import generateInput
 from testGeneration_Mutation import bitFlipping, byteShift, logicalMutations
-from ECUFeedback import readDTCInformation, responseTiming, recordNonUDSTraffic, getAverageResponseTime
+from ECUFeedback import readDTCInformation, responseTiming, recordNonUDSTraffic, getAverageResponseTime, sortTraffic
 import availableUDSServices
 import argparse
 import random
 import pyradamsa
+import threading
 from os.path import exists
 
-crashFile = "crashes.txt"
+crashFile = "usefulInputs.txt"
 SIDs = []
+usedInputsFile = "usedInputs.txt"
 
 def randCANframe():
     frame = []
@@ -25,6 +27,7 @@ def main():
         availableUDSServices.main()
 
     f = open('availableServices.log','r')
+    global SIDs
     SIDs = list(map(lambda x : int(x,16),f.readlines()))
     f.close()
     radamsa = pyradamsa.Radamsa()
@@ -32,7 +35,6 @@ def main():
     feedbackMethods = []
     avgRespT = None
     totalDTCs = 0
-    usedInputs = {[]: 1}
 
     parser = argparse.ArgumentParser(description = "Fuzz the UDS protocol on an ECU")
     # Input generation arguments
@@ -67,17 +69,29 @@ def main():
         avgRespT = getAverageResponseTime(5)
         feedbackMethods.append(responseTiming)
     if (args.traffic):
-        recordNonUDSTraffic(True)
+        canCommunication.sendWakeUpMessage()
+        recordNonUDSTraffic(True, None)
         feedbackMethods.append(recordNonUDSTraffic)
 
     if (len(feedbackMethods) == 0): # no feedback methods given
         print("Please provide at least one method for feedback (-d, -ti or -tr). Use -h or --help for help")
         exit(0)
 
-    logFile = open(crashFile,'a')
+    usedInputs = open(usedInputsFile,'a+')
+    usedInputs.write(bytes([0]).hex()+"\n")
+    usedInputs.seek(0)
 
+    logFile = open(crashFile,'a')
+    if (args.traffic):
+        thread = threading.Thread(target=recordNonUDSTraffic, args=(False,logFile,))
+        thread.daemon = True
+        canCommunication.sendWakeUpMessage()
+        thread.start() # Start the recording of traffic asynchronously
+    else:
+        canCommunication.sendWakeUpMessage()
     while True:
         try:
+            #print("Fuzzing...")
             if (generateInput in testGenerationMethods):
                 initialData = generateInput()
             else:
@@ -85,29 +99,37 @@ def main():
             
 
             mutationMethods = [method for method in testGenerationMethods if method != generateInput]
-            data = []
-            while data in usedInputs:
+            data = [0]
+            #print(list(map(lambda x: x.replace("\n",""), usedInputs.readlines())))
+            currentInputs = list(map(lambda x: x.replace("\n",""), usedInputs.readlines()))
+            while bytes(data).hex() in currentInputs:
                 if (args.mutational):
                     mutate = random.choice(mutationMethods) # pick a random mutation function
                     data = mutate(initialData, args.mutation_iterations)            
                 elif (args.radamsa):
                     mutate = mutationMethods[0] # if radamsa is set there will only be one muation method
-                    data = mutate(initialData,max_mut=7)
+                    data = initialData[0] + list(mutate(initialData[1:],max_mut=7)) # ignore SID when using radamsa to mutate
                 else:
                     data = initialData
-            usedInputs[data] = 1 # add data to list of used inputs
+            print("Fuzzing with "+bytes(data).hex() + "\n")
+            usedInputs.seek(0,2) # go to end of file to write new input
+            usedInputs.write(bytes(data).hex() + "\n") # add data to list of used inputs
+            #usedInputs.flush()
+            usedInputs.seek(0)  # go to start of file
+
             
             if (args.timing):
                 respData = responseTiming(avgT=avgRespT, data=data, timeThresholdMultipler=args.timing)
                 resp = respData[0]
                 if (respData[1]): # response took long enough to trigger threshold
                     logFile.write(bytes(data).hex() + " casued ECU to take " + str(respData[1]) + " seconds to respond\n")
+                    #logFile.flush()
                     #print(bytes(data).hex() + " casued ECU to take " + str(respData[1]) + "seconds to respond\n") # CHANGE TO WRITE TO FILE LATER (with reason)
             else:
                 resp = canCommunication.sendUDSReq(data)
             
-            if (resp == None):
-                logFile.write(bytes(data).hex() + " caused a None reponse (likely due to timeout from no response)\n")
+            #if (resp == None): Probably not needed since most requests seem to have no response 
+                #logFile.write(bytes(data).hex() + " caused a None reponse (likely due to timeout from no response)\n")
                 #print(bytes(data).hex() + " caused a None reponse (likely due to timeout from no response)\n") # CHANGE TO WRITE TO FILE LATER (with reason)
             
             if (args.dtc):
@@ -115,16 +137,19 @@ def main():
                 if (dtcs != -1): # make sure we got something
                     if (dtcs > totalDTCs): # test caused DTC(s)
                         logFile.write(bytes(data).hex() + " caused " + str(dtcs - totalDTCs) + " DTC(s)\n")
+                        #logFile.flush()
                         #print(bytes(data).hex() + " caused " + str(dtcs - totalDTCs) + " DTC(s)\n") # CHANGE TO WRITE TO FILE LATER (with reason)
                     totalDTCs = dtcs
-            if (args.traffic):
-                Traffic = recordNonUDSTraffic(False)
-                if (bool(Traffic[0])): # test caused new CAN traffic
-                    logFile.write(bytes(data).hex() + " caused new CAN traffic to occur: " + str(Traffic[0]) +"\n")
+
+            #if (args.traffic):
+                #Traffic = recordNonUDSTraffic(False)
+                #if (bool(Traffic[0])): # test caused new CAN traffic
+                    #logFile.write(bytes(data).hex() + " caused new CAN traffic to occur: " + str(Traffic[0]) +"\n")
                     #print(bytes(data).hex() + " caused new CAN traffic to occur: " + str(Traffic[0]) +"\n") # CHANGE TO WRITE TO FILE LATER (with reason) # place holder 
         except KeyboardInterrupt:
             logFile.close()
+            usedInputs.close()
+            sortTraffic()
             exit(0)
-
 
 main()
