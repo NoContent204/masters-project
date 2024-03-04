@@ -31,6 +31,14 @@ def sortTraffic():
     sortedTraffic = {idsANDTraffic[i] : idsANDTraffic[i+1] for i in range (0,len(idsANDTraffic),2)}
     sortedTraffic = dict(sorted(sortedTraffic.items(), key = lambda x: len(x[1])))
 
+    f = open("sortedTraffic.txt","w")
+    for id in sortedTraffic:
+        f.write(hex(id)+"\n")
+        for data in sortedTraffic[id].keys():
+            f.write(data.hex()+ "\n")
+        f.write("\n")
+    f.close()
+
     # Also save all the recorded traffic to compare once we're done
     f = open("nonUDSTraffic_new.txt","w")
     for id in nonUDSTraffic:
