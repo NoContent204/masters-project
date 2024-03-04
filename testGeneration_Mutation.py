@@ -1,6 +1,11 @@
 import random
 from textwrap import wrap
-from testGeneration_Grammar import generateInput
+
+def mutateData(data: "list[int]", iterations: int):
+    for _ in range(iterations):
+        mutation = random.choice(bitFlipping,logicalMutations,byteShift,byteDeletion,byteAddition) # pick a random mutation function
+        data = mutation(data, 1)
+    return data         
 
 def bitFlipping(data: "list[int]", iterations: int):
     binarydata: str = ''.join(list(map(lambda x : format(x,'#010b').replace("0b",""),data))) # turn data array into binary string
@@ -49,20 +54,20 @@ def byteShift(data: "list[int]", iterations: int):
     return data
 
 def byteDeletion(data: "list[int]", iterations: int):
-    for x in range(iterations):
+    for _ in range(iterations):
         if (len(data) == 1):
             return data # can't delete anymore bytes
         else:
-            index = random.randint(0,len(data)-1)
+            index = random.randint(1,len(data)-1) # don't delete SID
             del data[index]
     return data
 
 def byteAddition(data: "list[int]", iterations: int):
-    for x in range(iterations):
+    for _ in range(iterations):
         if (len(data) == 7):
             return data # can't add anymore data (7 bytes is max length of data because CAN frame is 8 bytes (7 bytes of data + PCI byte))
         else:
-            index = random.randint(0,len(data)-1)
+            index = random.randint(1,len(data)-1) # don't insert at start i.e. don't override SID
             newByte = random.getrandbits(8)
             data.insert(index,newByte)
     return data
