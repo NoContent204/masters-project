@@ -20,7 +20,7 @@ def readDTCInformation():
     else:
         return -1
     
-def sortTraffic():
+def sortTraffic(dirName):
     # Once program has been stopped this code should execute which sorts all recorded traffic by id's that transmit the most messages and then by the frequency of the specific data
     idsANDTraffic = []
     for traffic in nonUDSTraffic.items():
@@ -31,7 +31,7 @@ def sortTraffic():
     sortedTraffic = {idsANDTraffic[i] : idsANDTraffic[i+1] for i in range (0,len(idsANDTraffic),2)}
     sortedTraffic = dict(sorted(sortedTraffic.items(), key = lambda x: len(x[1])))
 
-    f = open("sortedTraffic.txt","w")
+    f = open(dirName+"/"+"sortedTraffic.txt","w")
     for id in sortedTraffic:
         f.write(hex(id)+"\n")
         for data in sortedTraffic[id].keys():
@@ -40,7 +40,7 @@ def sortTraffic():
     f.close()
 
     # Also save all the recorded traffic to compare once we're done
-    f = open("nonUDSTraffic_new.txt","w")
+    f = open(dirName+"/"+"nonUDSTraffic_new.txt","w")
     for id in nonUDSTraffic:
         f.write(hex(id) + "\n")
         #print(nonUDSTraffic[id].keys())
@@ -51,7 +51,7 @@ def sortTraffic():
         f.write("\n")
     f.close()
     
-def recordNonUDSTraffic(initial: bool, logFile: TextIOWrapper):
+def recordNonUDSTraffic(initial: bool, logFile: TextIOWrapper, dirName: str):
     bus.set_filters() # reset filters to record all data
     finishT = time.time() + 15 # Record traffic for 10 seconds
     if initial: # dict is empty 
@@ -69,7 +69,7 @@ def recordNonUDSTraffic(initial: bool, logFile: TextIOWrapper):
                 nonUDSTraffic[id].update({bytes(data): -1})  
             else:
                 nonUDSTraffic.update({id: {bytes(data): -1}})
-        f = open("nonUDSTraffic_Initial.txt", "w")
+        f = open(dirName+"/"+"nonUDSTraffic_Initial.txt", "w")
         for id in nonUDSTraffic:
             f.write(hex(id) + "\n")
             for data in nonUDSTraffic[id].keys():
@@ -77,10 +77,10 @@ def recordNonUDSTraffic(initial: bool, logFile: TextIOWrapper):
             f.write("\n")
         f.close()
     else: # get new traffic
-        usedInputs = open("usedInputs.txt","r")
+        usedInputs = open(dirName+"/"+"usedInputs.txt","r")
         print("Recording new traffic...")
         while True:
-            message = bus.recv(0.5) #reader.get_message()#
+            message = bus.recv(0.5)
             if message == None:
                 continue
 

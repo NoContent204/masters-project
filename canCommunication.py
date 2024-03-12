@@ -21,7 +21,10 @@ def sendUDSReq(dataFrame, timeout=0.2): # SID included within dataFrame array
     return resp
 
 def extendedSession():
-    bus.send(can.Message(arbitration_id=TX_CAN_ID, data=[0x02,0x10,0x03,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)) # switch to extended diagnostic control session
+    resp = None
+    while (resp == None): # repeat sending the message until we get a response i.e we have changed sessions 
+        bus.send(can.Message(arbitration_id=TX_CAN_ID, data=[0x02,0x10,0x03,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)) # switch to extended diagnostic control session
+        resp = bus.recv(0.5)
 
 
 def sendWakeUpMessage(): # function to send a wake up message to the ECU (Tester present) to make sure ECU will respond to fuzzing messages

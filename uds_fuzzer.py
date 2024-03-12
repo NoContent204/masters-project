@@ -1,6 +1,6 @@
 import canCommunication
 from testGeneration_Grammar import generateInput
-from testGeneration_Mutation import bitFlipping, byteShift, logicalMutations, byteAddition, byteDeletion, mutateData
+from testGeneration_Mutation import mutateData
 from ECUFeedback import readDTCInformation, responseTiming, recordNonUDSTraffic, getAverageResponseTime, sortTraffic
 import availableUDSServices
 
@@ -9,6 +9,9 @@ import random
 import pyradamsa
 import threading
 from os.path import exists
+from os import mkdir
+from datetime import datetime
+import time
 
 crashFile = "usefulInputs.txt"
 SIDs = []
@@ -32,8 +35,8 @@ def main():
     SIDs = list(map(lambda x : int(x,16),f.readlines()))
     f.close()
     radamsa = pyradamsa.Radamsa()
-    testGenerationMethods = []
-    feedbackMethods = []
+    #testGenerationMethods = []
+    #feedbackMethods = []
     avgRespT = None
     totalDTCs = 0
 
@@ -50,41 +53,57 @@ def main():
     parser.add_argument("-tr", "--traffic", action="store_true", help="Enable the use of the CAN traffic for feedback") # enable feedback via CAN traffic
     args = parser.parse_args()
     
+
+    if (not(any([args.mutational,args.grammar,args.radamsa]))):
+        print("Please provide at least one method for generating inputs (-m, -g or -r). Use -h or --help for help")
+        exit(0)
+
+    if (not(any([args.dtc,args.timing,args.traffic]))):
+        print("Please provide at least one method for feedback (-d, -ti or -tr). Use -h or --help for help")
+        exit(0)
     if (args.mutational and args.radamsa):
         print("Please use either the muatational setting OR the radamsa setting or neither")
         exit(0)
-    if (args.radamsa):
-        testGenerationMethods.append(radamsa.fuzz)
-    if (args.mutational):
-        testGenerationMethods.append(byteShift)
-        testGenerationMethods.append(bitFlipping)
-        testGenerationMethods.append(logicalMutations)
-    if (args.grammar):
-        testGenerationMethods.append(generateInput)
-    if (len(testGenerationMethods) == 0): # no test generation methods given
-        print("Please provide at least one method for generating inputs (-m, -g or -r). Use -h or --help for help")
-        exit(0)
-    if (args.dtc):
-        feedbackMethods.append(readDTCInformation)
     if (args.timing):
-        avgRespT = getAverageResponseTime(5)
-        feedbackMethods.append(responseTiming)
-    if (args.traffic):
-        canCommunication.sendWakeUpMessage()
-        recordNonUDSTraffic(True, None)
-        feedbackMethods.append(recordNonUDSTraffic)
+        getAverageResponseTime(5)
+    
+    # if (args.radamsa):
+    #     testGenerationMethods.append(radamsa.fuzz)
+    # if (args.mutational):
+    #     testGenerationMethods.append(byteShift)
+    #     testGenerationMethods.append(bitFlipping)
+    #     testGenerationMethods.append(logicalMutations)
+    # if (args.grammar):
+    #     testGenerationMethods.append(generateInput)
+    # if (len(testGenerationMethods) == 0): # no test generation methods given
+    #     print("Please provide at least one method for generating inputs (-m, -g or -r). Use -h or --help for help")
+    #     exit(0)
+    # if (args.dtc):
+    #     feedbackMethods.append(readDTCInformation)
+    # if (args.timing):
+    #     avgRespT = getAverageResponseTime(5)
+    #     feedbackMethods.append(responseTiming)
+    # if (args.traffic):
+    #     feedbackMethods.append(recordNonUDSTraffic)
 
-    if (len(feedbackMethods) == 0): # no feedback methods given
-        print("Please provide at least one method for feedback (-d, -ti or -tr). Use -h or --help for help")
-        exit(0)
+    # if (len(feedbackMethods) == 0): # no feedback methods given
+    #     print("Please provide at least one method for feedback (-d, -ti or -tr). Use -h or --help for help")
+    #     exit(0)
 
-    usedInputs = open(usedInputsFile,'a+')
+    dirName = "results/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    mkdir(dirName)
+
+
+    usedInputs = open(dirName+"/"+usedInputsFile,'a+')
     usedInputs.write(bytes([0]).hex()+"\n")
     usedInputs.seek(0)
 
-    logFile = open(crashFile,'a+')
+
+    logFile = open(dirName+"/"+crashFile,'a+')
     if (args.traffic):
-        thread = threading.Thread(target=recordNonUDSTraffic, args=(False,logFile,))
+        canCommunication.sendWakeUpMessage()
+        recordNonUDSTraffic(True, None, dirName)
+        thread = threading.Thread(target=recordNonUDSTraffic, args=(False,logFile,dirName,))
         thread.daemon = True
         canCommunication.sendWakeUpMessage()
         thread.start() # Start the recording of traffic asynchronously
@@ -92,16 +111,17 @@ def main():
         canCommunication.sendWakeUpMessage()
     
     canCommunication.extendedSession() # put us in extended session
+    startTime = time.time()
     while True:
         try:
             #print("Fuzzing...")
-            if (generateInput in testGenerationMethods):
+            if (args.grammar):
                 initialData = generateInput()
             else:
                 initialData = randCANframe()
             
 
-            mutationMethods = [method for method in testGenerationMethods if method != generateInput]
+           #mutationMethods = [method for method in testGenerationMethods if method != generateInput]
             data = [0]
             currentInputs = list(map(lambda x: x.replace("\n",""), usedInputs.readlines()))
             while bytes(data).hex() in currentInputs:
@@ -109,8 +129,8 @@ def main():
                     #mutate = random.choice(mutationMethods) # pick a random mutation function
                     data = mutateData(initialData, args.mutation_iterations)            
                 elif (args.radamsa):
-                    mutate = mutationMethods[0] # if radamsa is set there will only be one muation method
-                    data = [initialData[0]] + list(mutate(initialData[1:],max_mut=6)) # ignore SID when using radamsa to mutate
+                    #mutationMethods[0] # if radamsa is set there will only be one muation method
+                    data = [initialData[0]] + list(radamsa.fuzz(initialData[1:],max_mut=6)) # ignore SID when using radamsa to mutate
                 else:
                     data = initialData
             print("Fuzzing with "+bytes(data).hex() + "\n")
@@ -129,8 +149,10 @@ def main():
                 resp = canCommunication.sendUDSReq(data)
             if (resp != None):
                 if resp.data[1] != 0x7f:
-                    logFile.write(bytes(data).hex() + " caused postive response: "+resp.data[2:].hex()+"\n")
+                    logFile.write(bytes(data).hex() + " caused positive response: "+resp.data[2:].hex()+"\n")
                 else:
+                    if (resp.data[3] == 0x7f):
+                        canCommunication.extendedSession() # if "Service unavailable in current session" make sure we're in an extended session
                     if (resp.data[3] != 0x13): # ignore errors that are about invalid lengths/formats
                         logFile.write(bytes(data).hex() + " caused negaitve response. NRC: "+hex(resp.data[3])+"\n")
             
@@ -146,13 +168,15 @@ def main():
                     totalDTCs = dtcs
 
         except KeyboardInterrupt:
+            timeRunning = time.time() - startTime
             usedInputs.seek(0)
             logFile.seek(0)
+            print("Fuzzer ran for "+str(timeRunning)+"s ("+str(timeRunning/60)+" mins)")
             print("Fuzzing ended by user...\nFuzzer produced: "+str(len(usedInputs.readlines()))+ " inputs")
             print("Fuzzer found "+str(len(logFile.readlines()))+ " interesting inputs   ")
             logFile.close()
             usedInputs.close()
-            sortTraffic()
+            sortTraffic(dirName)
             exit(0)
 
 main()

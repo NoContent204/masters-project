@@ -168,7 +168,7 @@ def main():
    for service in SIDs:
       SID = service["SID"]
       print("Scanning SID: "+ hex(SID))
-      for x in range(5): # try to get a response 5 times to avoid getting None 
+      for x in range(10): # try to get a response 10 times to avoid getting None 
          #resp = sendUDSReq(SID, []) # start with blank data
          resp = canCommunication.sendUDSReq([SID] + [])
          if (resp != None and resp.arbitration_id != 0x72e):
@@ -181,8 +181,8 @@ def main():
          if (resp != None and resp.arbitration_id == 0x72e):
             break # if we got a response then break the loop
 
-      if (resp == None): # even after 5 tries we get None
-         print("No response after 5 attempts - assume service unavailable")
+      if (resp == None): # even after 10 tries we get None
+         print("No response after 10 attempts - assume service unavailable")
          availableServices = [service for service in availableServices if not (service['SID'] == SID)]
          continue
 
