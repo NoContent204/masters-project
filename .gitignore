@@ -1,5 +1,7 @@
 __pycache__/
 results/
+boofuzz/env/
+boofuzz/boofuzz-results/
 *.txt
 !requirements.txt
 *.log
