@@ -29,22 +29,14 @@ def generateInput():
     currentTerm = startTerm
 
     while(len(re.findall(nonTerminalPattern,currentTerm)) !=0): # while there are still non terminal symbols to expand
-        # print(re.findall(nonTerminalPattern,currentTerm))
-        # print(currentTerm)
 
         expandingSymbol: str = re.findall(nonTerminalPattern,currentTerm)[0] # get first non terminal symbol
         expansionOptions: "list[str]" = UDS_Grammar2[expandingSymbol] # get list of expanding options for that symbol
-        #print(expansionOptions)
 
         probabilites = expansionOptions["probs"]
         expansionList = expansionOptions["options"]
         chosenExpansion = numpy.random.choice(expansionList,p=probabilites) # choose an expansion based off the probabilites
 
-        #print(chosenExpansion)
-
-        # print("chosen = "+chosenExpansion)
-
-        #print(expandingSymbol + " ----> "+ chosenExpansion)
         currentTerm = currentTerm.replace(expandingSymbol,chosenExpansion,1) # replace the non terminal symbol with the chosen expansion
         
 

@@ -35,7 +35,6 @@ def logicalNOT(a: int, _):
     return abs(~a)
 
 def logicalMutations(data: "list[int]", iterations: int):
-    # & and, | or , ^ xor, ~ not
     for x in range(iterations):
         logicalFunc = random.choice([logicalAND,logicalOR,logicalXOR,logicalNOT])
         if (len(data) > 2):

@@ -20,7 +20,7 @@ usedInputsFile = "usedInputs.txt"
 def randCANframe():
     frame = []
     dlc = random.randint(1,6) # exlcude SID
-    SID = random.choice(SIDs)#["SID"] # randomly pick an SID
+    SID = random.choice(SIDs)# randomly pick an SID
     frame.append(SID)
     for _ in range(dlc):
         frame.append(random.getrandbits(8)) # generate random data
@@ -35,8 +35,6 @@ def main():
     SIDs = list(map(lambda x : int(x,16),f.readlines()))
     f.close()
     radamsa = pyradamsa.Radamsa()
-    #testGenerationMethods = []
-    #feedbackMethods = []
     avgRespT = None
     totalDTCs = 0
 
@@ -67,29 +65,6 @@ def main():
     if (args.timing):
         getAverageResponseTime(5)
     
-    # if (args.radamsa):
-    #     testGenerationMethods.append(radamsa.fuzz)
-    # if (args.mutational):
-    #     testGenerationMethods.append(byteShift)
-    #     testGenerationMethods.append(bitFlipping)
-    #     testGenerationMethods.append(logicalMutations)
-    # if (args.grammar):
-    #     testGenerationMethods.append(generateInput)
-    # if (len(testGenerationMethods) == 0): # no test generation methods given
-    #     print("Please provide at least one method for generating inputs (-m, -g or -r). Use -h or --help for help")
-    #     exit(0)
-    # if (args.dtc):
-    #     feedbackMethods.append(readDTCInformation)
-    # if (args.timing):
-    #     avgRespT = getAverageResponseTime(5)
-    #     feedbackMethods.append(responseTiming)
-    # if (args.traffic):
-    #     feedbackMethods.append(recordNonUDSTraffic)
-
-    # if (len(feedbackMethods) == 0): # no feedback methods given
-    #     print("Please provide at least one method for feedback (-d, -ti or -tr). Use -h or --help for help")
-    #     exit(0)
-
     dirName = "results/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     mkdir(dirName)
 
@@ -114,29 +89,24 @@ def main():
     startTime = time.time()
     while True:
         try:
-            #print("Fuzzing...")
             if (args.grammar):
                 initialData = generateInput()
             else:
                 initialData = randCANframe()
             
 
-           #mutationMethods = [method for method in testGenerationMethods if method != generateInput]
             data = [0]
             currentInputs = list(map(lambda x: x.replace("\n",""), usedInputs.readlines()))
             while bytes(data).hex() in currentInputs:
                 if (args.mutational):
-                    #mutate = random.choice(mutationMethods) # pick a random mutation function
                     data = mutateData(initialData, args.mutation_iterations)            
                 elif (args.radamsa):
-                    #mutationMethods[0] # if radamsa is set there will only be one muation method
                     data = [initialData[0]] + list(radamsa.fuzz(initialData[1:],max_mut=6)) # ignore SID when using radamsa to mutate
                 else:
                     data = initialData
             print("Fuzzing with "+bytes(data).hex() + "\n")
             usedInputs.seek(0,2) # go to end of file to write new input
             usedInputs.write(bytes(data).hex() + "\n") # add data to list of used inputs
-            #usedInputs.flush()
             usedInputs.seek(0)  # go to start of file
 
             
@@ -155,10 +125,6 @@ def main():
                         canCommunication.extendedSession() # if "Service unavailable in current session" make sure we're in an extended session
                     if (resp.data[3] != 0x13): # ignore errors that are about invalid lengths/formats
                         logFile.write(bytes(data).hex() + " caused negaitve response. NRC: "+hex(resp.data[3])+"\n")
-            
-            #if (resp == None): Probably not needed since most requests seem to have no response 
-                #logFile.write(bytes(data).hex() + " caused a None reponse (likely due to timeout from no response)\n")
-                #print(bytes(data).hex() + " caused a None reponse (likely due to timeout from no response)\n") # CHANGE TO WRITE TO FILE LATER (with reason)
             
             if (args.dtc):
                 dtcs = readDTCInformation()

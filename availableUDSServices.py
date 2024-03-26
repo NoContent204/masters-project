@@ -3,16 +3,6 @@
 # import numpy as np
 import canCommunication
 
-# def sendUDSReq(SID, dataFrame):
-#    PCI = 0x1 + len(dataFrame) # calculate the length of the data including the SID for the PCI header required by CAN-TP (ISO 15765) (assuming single frame)
-#    canData = [PCI,SID] + dataFrame
-#    print(canData)
-#    canData = list(np.pad(canData,(0,8-len(canData)),'constant',constant_values=0)) # padd data with zeros
-#    print(canData)
-#    bus.send(can.Message(arbitration_id=tx_canID, data=canData, is_extended_id=False))
-#    resp = bus.recv(timeout=6)
-#    return resp
-
 SIDs = [
    {
       "SID": 0x10, # Diagnostic session control *
@@ -124,43 +114,6 @@ SIDs = [
    },
 ]
 
-# SIDs = {
-#    0x10, # Diagnostic session control *
-#    #0x11, # ECU reset *
-#    0x27, # Security Access *
-#    # 0x28, # Communication control *
-#    # 0x29, # Authentication ?
-#    0x3e, # Tester Present *
-#    # 0x83, # Access timing parameters *
-#    # 0x84, # Secured data transmission 
-#    # 0x85, # Control DTC Settings *
-#    # 0x86, # Response on Event *
-#    0x87, # Link Control *
-#    0x22, # Read Data by Identifier
-#    0x23, # Read memory by address
-#    # 0x24, # Read Scaling data by identifier
-#    # 0x2a, # Read data by identifier periodic
-#    # 0x2c, # Dynamically defind data identifer *
-#    0x2e, # Write data by identifier
-#    0x3d, # Write memory by address 
-#    0x14, # Clear diagnoistic information
-#    0x19, # Read DTC information *
-#    0x2f, # Input output control by identifter 
-#    0x31, # Routine control *
-#    0x34, # Request download
-#    0x35, # Request upload
-#    0x36, # Transfer data
-#    0x37, # Request transfer exit
-#    0x38  # Request file transfer 
-# }
-
-
-#bus = can.Bus(interface='socketcan' , channel='can0', bitrate=500000)
-#bus.set_filters([{"can_id": 0x72e, "can_mask": 0x72e, "extended": False}]) # set filter to only get responses from the response CAN-ID for UDS (0x72e)
-#message = can.Message(arbitration_id=0x7df, data=[0x02,0x3e,0x00,0x00,0x00,0x00,0x00,0x00], is_extended_id=False)
-#print(bus.filters)
-#bus.send(message) # send a message to "wake up" the ECU    
-#tx_canID = 0x7df
 def main():
    canCommunication.sendWakeUpMessage()
    availableServices = list(SIDs)
@@ -169,13 +122,10 @@ def main():
       SID = service["SID"]
       print("Scanning SID: "+ hex(SID))
       for x in range(10): # try to get a response 10 times to avoid getting None 
-         #resp = sendUDSReq(SID, []) # start with blank data
          resp = canCommunication.sendUDSReq([SID] + [])
          if (resp != None and resp.arbitration_id != 0x72e):
-            #resp = sendUDSReq(SID, []) # sometimes we get a random message form id 4? so we have to resend 
             resp = canCommunication.sendUDSReq([SID] + [])
          if (resp == None):
-            #resp = sendUDSReq(SID, [0x01]) or sendUDSReq(SID,[0x11,0x11,0x11,0x11,0x11,0x11]) # try either a subfunction of 0x01 or all the data being 1's
             resp = canCommunication.sendUDSReq([SID] + [0x01]) or canCommunication.sendUDSReq([SID] + [0x11,0x11,0x11,0x11,0x11,0x11])
 
          if (resp != None and resp.arbitration_id == 0x72e):
@@ -193,7 +143,6 @@ def main():
          # All the response codes (other than 0x11) imply that the service is supported but a specific error has occured, we can still fuzz these services
          if (resp.data[3] == 0x11): # Specific negative response codes
             print("Service not supported")
-            #availableServices.remove(SID) 
             availableServices = [service for service in availableServices if not (service['SID'] == SID)]# service is not supported by the BCM so remove the service ID from the list
          elif (resp.data[3] == 0x12):
             print(hex(SID) + " - Sub-function not supported")

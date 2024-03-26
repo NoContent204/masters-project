@@ -11,11 +11,7 @@ nonUDSTraffic: "dict[int, dict[bytes,int]]" = {} # dictionary mapping can ids to
 def readDTCInformation():
     resp = canCommunication.sendUDSReq([0x19,0x01,0x05]) # call read DTC info service with subfunction 0x01 (report Number Of DTC By Status Mask)
     # we use a status mask of 0x05 which is a combination of pendingDTC (0x04) status and testFailed (0x01) status
-
-    #bus.send(can.Message(arbitration_id=tx_canID, data=[0x03,0x19,0x01,0x05,0x00,0x00,0x00,0x00] , is_extended_id=False)) 
-    #resp = bus.recv(timeout=0.5)
     if (resp):
-        #print(resp.data[4])
         return resp.data[4] # print number of DTCs
     else:
         return -1
@@ -43,9 +39,7 @@ def sortTraffic(dirName):
     f = open(dirName+"/"+"nonUDSTraffic_new.txt","w")
     for id in nonUDSTraffic:
         f.write(hex(id) + "\n")
-        #print(nonUDSTraffic[id].keys())
         for data in nonUDSTraffic[id].keys():
-            #print(data)
             if nonUDSTraffic[id][data] != -1:
                 f.write(data.hex() + "\n")
         f.write("\n")
@@ -92,18 +86,13 @@ def recordNonUDSTraffic(initial: bool, logFile: TextIOWrapper, dirName: str):
             usedInputs.seek(0)
             if not(id in nonUDSTraffic): # id not in traffic 
                 logFile.write(hex(id) + " " + bytes(data).hex() + " cause by "+ mostRecentInput+ "\n")
-                #logFile.flush()
-                #newTraffic.append(message) # ?
                 nonUDSTraffic.update({id: {bytes(data): 1}})    
             elif not(bytes(data) in nonUDSTraffic[id]): # id in traffic but not this data
                 logFile.write(hex(id) + " " + bytes(data).hex() + " cause by "+ mostRecentInput+ "\n")
-                #logFile.flush()
-                #newTraffic.append(message) # ?
                 nonUDSTraffic[id].update({bytes(data): 1}) # add message info to set of traffic 
             else: # if id AND data seen before
                 if (nonUDSTraffic[id][bytes(data)] != -1): # message wasn't part of initial traffic i.e. we don't want to increment number of times seen for initial traffic because it should always be seen
                     nonUDSTraffic[id].update({bytes(data): nonUDSTraffic[id][bytes(data)] + 1}) # increase number of times message has been seen
-    #return [newTraffic,nonUDSTraffic]
 
 def getAverageResponseTime(n: int):
     testerPresentFrame = [0x3e,0x00]
