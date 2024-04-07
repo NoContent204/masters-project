@@ -9,7 +9,7 @@ You can install the dependecies for this project with
 `pip install -r requirements.txt`
 
 
-This project implements a grey-box fuzzer for the automotive Unified Diagnostic Services (UDS) protocol.
+This project implements a black-box fuzzer for the automotive Unified Diagnostic Services (UDS) protocol.
 
 The main program of this project is uds-fuzzer.py
 You can get help for running the program with the `-h` option

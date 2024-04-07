@@ -1,6 +1,5 @@
 # Script to find which services are avaiable on the UDS implementation we are fuzzing
-# import can
-# import numpy as np
+
 import canCommunication
 
 SIDs = [

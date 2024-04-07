@@ -1,5 +1,6 @@
-from io import TextIOWrapper
 import canCommunication
+
+from io import TextIOWrapper
 import can
 import time
 try:

@@ -1,9 +1,11 @@
 # This file implements a simple BNF grammar for the structure of single frame UDS requests using a dictionary that maps nonterminal symbols to their corresponding expansions
+import availableUDSServices
+
 import re
 from textwrap import wrap
 import numpy
-import availableUDSServices
 from os.path import exists
+
 UDS_Grammar2: "dict[str,dict[str,list[any]]]" = { # grammar using probabilities, allows for varying length of the data
     "<start>": {"options":["<udsReq>"],"probs":[1]}, # only one option
     "<udsReq>": {"options":["<SID><subfunction><data>", "<SID><data>"],"probs":[0.5,0.5]}, # equal chances
